@@ -1,0 +1,6 @@
+<h4> 
+    <a href="/blog/{{p.key().id()}}#">{{p.subject}}</a> 
+</h4>
+    
+<p class="post-content">{{p._render_text | safe}}
+<br><small>(Posted on {{p.created.strftime("%b %d, %Y")}} by {{p.getUserName()}})</small> </p>

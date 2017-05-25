@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Udacity Blog</h2>
+    {% if deleted_post_id %}
+        <p style="color:#0027ff"> Post deleted successully </p>    
+    {% endif %}
+
+  {% for p in posts %}
+    {{ p.render() | safe }}
+    <br><br>
+  {% endfor %}
+
+{% endblock %}

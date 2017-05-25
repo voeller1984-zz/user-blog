@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit post</h2>
+
+
+<form method="post">
+   <input type="hidden" id="post_id" name="post_id" value="{{post_id}}">
+   <label>
+    <div>subject</div>
+    <input type="text" name="subject" style="width: 600px;" value="{{subject}}">
+  </label>
+  <br/><br/>
+  <label>
+    <div>blog</div>
+    <textarea style="margin: 0px; width: 600px; height: 140px;" name="content">{{content}}</textarea>
+  </label>
+
+  {% if error %}
+    {{error}}
+  {% endif %}
+
+  <br><input type="submit">
+</form>
+{% endblock %}

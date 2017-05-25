@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Blog Project</title>
+</head>
+
+<body>
+
+  {% if user %}
+  <h3 style="text-align: right;"">user: {{user.name}}</h3>
+  <p style="text-align: right;">
+    <a href="/blog/newpost">New Post</a>
+    <a href="/logout">Logout</a>
+  </p>
+  {% else %}
+  <p style="text-align: right;">
+    <a id="login-control" href="/login">Login</a>
+    <a id="signup-control" href="/signup">Sign Up</a>
+  </p>
+  {% endif %}
+
+
+  <section id="content">
+    {% block content %}
+    {% endblock %}
+  </section>
+
+  <hr>
+
+</body>
+</html>

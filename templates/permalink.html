@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% if error %}
+        <p style="color:#ff0000">{{error}}</p>
+    {% endif %}
+    {{post.render() | safe}}
+    <div style="display: inline-flex;"> 
+        <a href="/blog/deletepost/{{post.key().id()}}" style="margin-right: 10px;">Delete</a>
+        <a href="/blog/editpost/{{post.key().id()}}" style="margin-right: 10px;">Edit</a>
+
+        <form method="post" role="form" style="margin-right: 20px;"">
+        <input type="hidden" id="like" name="like" value="update">
+            <button type="submit">Like {{noOfLikes}}</button>
+        </form> 
+  
+
+        <form method="post" role="form">
+                <label for="comment">Comment:</label>
+                <input type="text" id="comment" name="comment" value="">
+            <button type="submit" >Submit</button>
+        </form>
+    </div>
+     <br>
+    {% for c in comments %}
+    <br>
+    <blockquote>
+        <p style="margin-top: 8px; margin-bottom: 8px;"> <i> {{ c.comment }} </i></p>
+        <small style="display: inline-flex;">
+            <a href="/blog/deletecomment/{{post.key().id()}}/{{c.key().id()}}" style="margin-right: 10px;">Delete</a>
+            <a href="/blog/editcomment/{{post.key().id()}}/{{c.key().id()}}" style="margin-right: 10px;">Edit</a>
+            <div>author: {{ c.getUserName() }} </div>
+        </small>
+    </blockquote>
+    {% endfor %}
+{% endblock %}
+
+
