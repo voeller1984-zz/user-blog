@@ -12,11 +12,20 @@ secret = 'blablablatraah45'
 
 
 def make_secure_val(val):
-    # create secure val from secret
+    """
+    this method expects a string as input,
+    the function return the initial srting 
+    and a hmac hashing (with a secret) in a hexdecimal format
+    """
     return '%s|%s' % (val, hmac.new(secret, val).hexdigest())
 
 
 def check_secure_val(secure_val):
+    """
+    verify if hash saved in cookie is correct:
+    expects in input a string (from cookie)
+    returns the undecoded val if the hashing is correct
+    """
     val = secure_val.split('|')[0]
     if secure_val == make_secure_val(val):
         return val
@@ -34,6 +43,11 @@ class BlogHandler(webapp2.RequestHandler):
         self.write(self.render_str(template, **kw))
 
     def set_secure_cookie(self, name, val):
+        """
+        set cookies in the header
+        input 2 strings: 
+        name of the cookie and value of the cookie
+        """
         cookie_val = make_secure_val(val)
         self.response.headers.add_header(
             'Set-Cookie',
@@ -58,8 +72,17 @@ class BlogHandler(webapp2.RequestHandler):
 def blog_key(name='default'):
     return db.Key.from_path('blogs', name)
 
+class NotFound(BlogHandler):
+    def get(self):
+        error = self.request.get('error')
+        self.render("404.html", error=error)
 
 class BlogFront(BlogHandler):
+    """
+    class BlogFront 
+    homepage handler 
+    shows all posts from most recent 
+    """
     def get(self):
         deleted_post_id = self.request.get('deleted_post_id')
         posts = greetings = Post.all().order('-created')
@@ -68,6 +91,9 @@ class BlogFront(BlogHandler):
 
 class PostPage(BlogHandler):
     def get(self, post_id):
+        """
+        render a specific post with all comments and likes
+        """
         key = db.Key.from_path('Post', int(post_id), parent=blog_key())
         post = db.get(key)
 
@@ -78,7 +104,7 @@ class PostPage(BlogHandler):
 
         if not post:
             self.error(404)
-            return
+            return self.redirect('not_found' + "?error= the post was not found")
 
         error = self.request.get('error')
 
@@ -91,7 +117,7 @@ class PostPage(BlogHandler):
 
         if not post:
             self.error(404)
-            return
+            return self.redirect('not_found' + "?error= something went wrong")
         c = ""
 
         if(self.user):
@@ -139,8 +165,12 @@ class NewPost(BlogHandler):
             self.redirect("/login")
 
     def post(self):
+        """
+        create new post and redirect to this page
+        after successful creation
+        """
         if not self.user:
-            self.redirect('/blog')
+            return self.redirect('/login')
 
         subject = self.request.get('subject')
         content = self.request.get('content')
@@ -174,6 +204,9 @@ class DeletePost(BlogHandler):
 
 class EditPost(BlogHandler):
     def get(self, post_id):
+        """
+        update post content
+        """
         if self.user:
             key = db.Key.from_path('Post', int(post_id), parent=blog_key())
             post = db.get(key)
@@ -210,6 +243,9 @@ class EditPost(BlogHandler):
 class DeleteComment(BlogHandler):
 
     def get(self, post_id, comment_id):
+        """
+        delete comment based on id of a post (post_id)
+        """
         if self.user:
             key = db.Key.from_path('Comment', int(comment_id),
                                    parent=blog_key())
@@ -244,10 +280,10 @@ class EditComment(BlogHandler):
 
     def post(self, post_id, comment_id):
         """
-            Updates post.
+        edit post (post_id) of a comment (comment_id)
         """
         if not self.user:
-            self.redirect('/blog')
+            return self.redirect('/login')
 
         comment = self.request.get('comment')
 
@@ -279,6 +315,10 @@ EMAIL_RE = re.compile(r'^[\S]+@[\S]+\.[\S]+$')
 
 
 def valid_email(email):
+    """
+    validate email field
+    if correct returns email
+    """
     return not email or EMAIL_RE.match(email)
 
 
@@ -325,7 +365,10 @@ class Signup(BlogHandler):
 
 class Register(Signup):
     def done(self):
-        # Make sure the user doesn't already exist
+        """ 
+        registration validation
+        Make sure the user doesn't already exist
+        """
         u = User.by_name(self.username)
         if u:
             msg = 'That user already exists.'
@@ -372,5 +415,6 @@ app = webapp2.WSGIApplication([
                                ('/signup', Register),
                                ('/login', Login),
                                ('/logout', Logout),
+                               ('/not_found', NotFound),
                                ],
                               debug=True)
