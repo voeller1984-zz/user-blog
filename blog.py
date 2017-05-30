@@ -222,22 +222,31 @@ class EditPost(BlogHandler):
 
     def post(self, post_id):
         if not self.user:
-            self.redirect('/blog')
+            self.redirect("/login?error=You need to be logged, " +
+                          "in order to edit your post!!")
+        """
+        autorization check
+        """
+        key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+        post = db.get(key)
+        if post.user_id == self.user.key().id():
 
-        subject = self.request.get('subject')
-        content = self.request.get('content')
+            subject = self.request.get('subject')
+            content = self.request.get('content')
 
-        if subject and content:
-            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-            post = db.get(key)
-            post.subject = subject
-            post.content = content
-            post.put()
-            self.redirect('/blog/%s' % post_id)
+            if subject and content:
+                post.subject = subject
+                post.content = content
+                post.put()
+                self.redirect('/blog/%s' % post_id)
+            else:
+                error = "subject and content, please!"
+                self.render("editpost.html", subject=subject,
+                            content=content, error=error)
         else:
-            error = "subject and content, please!"
-            self.render("editpost.html", subject=subject,
-                        content=content, error=error)
+                self.redirect("/blog/" + post_id + "?error=You don't have " +
+                              "access to edit this record.")
+
 
 
 class DeleteComment(BlogHandler):
