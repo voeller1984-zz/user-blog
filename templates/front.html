@@ -6,9 +6,11 @@
         <p style="color:#0027ff"> Post deleted successully </p>    
     {% endif %}
 
-  {% for p in posts %}
-    {{ p.render() | safe }}
-    <br><br>
-  {% endfor %}
+{% if posts %} 
+	{% for p in posts %}
+    	{{ p.render() | safe }}
+    	<br><br>
+  	{% endfor %}
+{% endif %}
 
 {% endblock %}
