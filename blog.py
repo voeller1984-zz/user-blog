@@ -105,12 +105,9 @@ class PostPage(BlogHandler):
                 # comments = db.Query(Comment).filter('post_id =', post.key().id()).order('-created')
                 comments = db.GqlQuery("select * from Comment where post_id =" +
                                         post_id + " order by created desc")
-
                 likes = db.GqlQuery("select * from Like where post_id="+post_id)
-                
                 error = self.request.get('error')
-              
-                return self.render("permalink.html", post=post, likes=likes, error=error, comments=comments)
+                return self.render("permalink.html", post=post, numLikes=likes.count(), error=error, comments=comments)
         else:
             self.error(404)
             return self.redirect('not_found' + "?error= the post was not found")
