@@ -34,18 +34,18 @@ class User(db.Model):
     email = db.StringProperty()
 
     @classmethod
-    def by_id(self, uid):
+    def by_id(cls, uid):
         #    fetch User object from database
         return User.get_by_id(uid, parent=users_key())
 
     @classmethod
-    def by_name(self, name):
+    def by_name(cls, name):
         # get List of User objects from database.
         u = User.all().filter('name =', name).get()
         return u
 
     @classmethod
-    def register(self, name, pw, email=None):
+    def register(cls, name, pw, email=None):
         #create a new user in db
         pw_hash = make_pw_hash(name, pw)
         return User(parent=users_key(),
@@ -54,7 +54,7 @@ class User(db.Model):
                     email=email)
 
     @classmethod
-    def login(self, name, pw):
-        u = self.by_name(name)
+    def login(cls, name, pw):
+        u = cls.by_name(name)
         if u and valid_pw(name, pw, u.pw_hash):
             return u

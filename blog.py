@@ -94,54 +94,55 @@ class PostPage(BlogHandler):
         """
         render a specific post with all comments and likes
         """
-        key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-        post = db.get(key)
+        if post_id:
+            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+            post = db.get(key)
 
-        comments = db.GqlQuery("select * from Comment where post_id = " +
-                               post_id + " order by created desc")
+            if not post:
+                self.error(404)
+                return self.redirect('not_found' + "?error= the post was not found")
+            else:
+                # comments = db.Query(Comment).filter('post_id =', post.key().id()).order('-created')
+                comments = db.GqlQuery("select * from Comment where post_id =" +
+                                        post_id + " order by created desc")
 
-        likes = db.GqlQuery("select * from Like where post_id="+post_id)
-
-        if not post:
+                likes = db.GqlQuery("select * from Like where post_id="+post_id)
+                
+                error = self.request.get('error')
+              
+                return self.render("permalink.html", post=post, likes=likes, error=error, comments=comments)
+        else:
             self.error(404)
             return self.redirect('not_found' + "?error= the post was not found")
-        else:
-            error = self.request.get('error')
-            if not comments:
-                comments  = ""
-            if not likes:
-                likes = 0   
-            self.render("permalink.html", post=post, noOfLikes=likes.count(),
-                    comments=comments, error=error)
+
 
     def post(self, post_id):
         
         if not self.user:
-            return self.redirect('/login')
+            return self.redirect('/login?error=login to edit a post!')
 
-        key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-        post = db.get(key)
+        if post_id:
+            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+            post = db.get(key)
 
-        if not post:
-            self.error(404)
-            return self.redirect('not_found' + "?error= something went wrong")
-        c = ""
+            if not post:
+                self.error(404)
+                return self.redirect('not_found' + "?error= something went wrong")
+            c = ""
 
-        if(self.user):
+            # update likes on lick-click
             if(self.request.get('like') and
-               self.request.get('like') == "update"):
+             self.request.get('like') == "update"):
                 likes = db.GqlQuery("select * from Like where post_id = " +
-                                    post_id + " and user_id = " +
-                                    str(self.user.key().id()))
+                                post_id + " and user_id = " +str(self.user.key().id()))
 
                 if self.user.key().id() == post.user_id:
-                    self.redirect("/blog/" + post_id +
-                                  "?error=You cannot like your " +
-                                  "post.!!")
-                    return
+                    return self.redirect("/blog/" + post_id +
+                                        "?error=You cannot like your post!")
+                #one can only like a post once
                 elif likes.count() == 0:
                     l = Like(parent=blog_key(), user_id=self.user.key().id(),
-                             post_id=int(post_id))
+                       post_id=int(post_id))
                     l.put()
 
             if(self.request.get('comment')):
@@ -149,19 +150,18 @@ class PostPage(BlogHandler):
                             post_id=int(post_id),
                             comment=self.request.get('comment'))
                 c.put()
-        else:
-            self.redirect("/login?error=You need to login before " +
-                          "performing edit, like or commenting.!!")
-            return
 
-        comments = db.GqlQuery("select * from Comment where post_id = " +
-                               post_id + "order by created desc")
+            comments = db.GqlQuery("select * from Comment where post_id = " +
+                                   post_id + "order by created desc")
 
-        likes = db.GqlQuery("select * from Like where post_id="+post_id)
+            likes = db.GqlQuery("select * from Like where post_id="+post_id)
 
-        self.render("permalink.html", post=post,
-                    comments=comments, noOfLikes=likes.count(),
-                    new=c)
+            self.render("permalink.html", post=post,
+                        comments=comments, numLikes=likes.count(),
+                        new=c)
+        else: 
+            self.error(404)
+            return self.redirect('not_found' + "?error= the post was not found")
 
 
 class NewPost(BlogHandler):
@@ -196,17 +196,18 @@ class NewPost(BlogHandler):
 class DeletePost(BlogHandler):
     def get(self, post_id):
         if self.user:
-            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-            post = db.get(key)
-            if not post:
-                return self.redirect("/login")
-            else:
-                if post.user_id == self.user.key().id():
-                    post.delete()
-                    self.redirect("/?deleted_post_id="+post_id)
+            if post_id:
+                key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+                post = db.get(key)
+                if not post:
+                    return self.redirect("/login")
                 else:
-                    self.redirect("/blog/" + post_id + "?error=You don't have " +
-                                  "access to delete this record.")
+                    if post.user_id == self.user.key().id():
+                        post.delete()
+                        self.redirect("/?deleted_post_id="+post_id)
+                    else:
+                        self.redirect("/blog/" + post_id + "?error=You don't have " +
+                                      "access to delete this record.")
         else:
             self.redirect("/login?error=You need to be logged, in order" +
                           " to delete your post!!")
@@ -218,14 +219,20 @@ class EditPost(BlogHandler):
         update post content
         """
         if self.user:
-            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-            post = db.get(key)
-            if post.user_id == self.user.key().id():
-                self.render("editpost.html", subject=post.subject,
-                            content=post.content)
+            if post_id:
+                key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+                post = db.get(key)
+                if post:
+                    if post.user_id == self.user.key().id():
+                        self.render("editpost.html", subject=post.subject,
+                                    content=post.content)
+                    else:
+                        self.redirect("/blog/" + post_id + "?error=You don't have " +
+                                      "access to edit this record.")
+                else:
+                    self.redirect("/login?error=post does not exists")
             else:
-                self.redirect("/blog/" + post_id + "?error=You don't have " +
-                              "access to edit this record.")
+                self.redirect("/login?error=post does not exists")
         else:
             self.redirect("/login?error=You need to be logged, " +
                           "in order to edit your post!!")
@@ -234,28 +241,32 @@ class EditPost(BlogHandler):
         if not self.user:
             self.redirect("/login?error=You need to be logged, " +
                           "in order to edit your post!!")
-        """
-        autorization check
-        """
-        key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-        post = db.get(key)
-        if post.user_id == self.user.key().id():
+        
+        if post_id:
+            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+            post = db.get(key)
+            if post:                
+                if post.user_id == self.user.key().id():
 
-            subject = self.request.get('subject')
-            content = self.request.get('content')
+                    subject = self.request.get('subject')
+                    content = self.request.get('content')
 
-            if subject and content:
-                post.subject = subject
-                post.content = content
-                post.put()
-                self.redirect('/blog/%s' % post_id)
-            else:
-                error = "subject and content, please!"
-                self.render("editpost.html", subject=subject,
-                            content=content, error=error)
+                    if subject and content:
+                        post.subject = subject
+                        post.content = content
+                        post.put()
+                        self.redirect('/blog/%s' % post_id)
+                    else:
+                        error = "subject and content, please!"
+                        self.render("editpost.html", subject=subject,
+                                    content=content, error=error)
+                else:
+                    self.redirect("/login?error=the post does not exists")
+            else: 
+                self.redirect("/login?error=the post does not exists")
         else:
-                self.redirect("/blog/" + post_id + "?error=You don't have " +
-                              "access to edit this record.")
+            self.redirect("/blog/" + post_id + "?error=You don't have " +
+                            "access to edit this record.")
 
 
 
@@ -266,16 +277,23 @@ class DeleteComment(BlogHandler):
         delete comment based on id of a post (post_id)
         """
         if self.user:
-            key = db.Key.from_path('Comment', int(comment_id),
-                                   parent=blog_key())
-            c = db.get(key)
-            if c.user_id == self.user.key().id() and key and c:
-                c.delete()
-                self.redirect("/blog/"+post_id+"?deleted_comment_id=" +
-                              comment_id)
+            if post_id and comment_id:
+                key = db.Key.from_path('Comment', int(comment_id),
+                                       parent=blog_key())
+                c = db.get(key)
+                if c:
+                    if c.user_id == self.user.key().id():
+                        c.delete()
+                        self.redirect("/blog/"+post_id+"?deleted_comment_id=" +
+                                      comment_id)
+                    else:
+                        self.redirect("/blog/" + post_id + "?error=You don't have " +
+                                      "access to delete this comment.")
+                else:
+                    self.redirect("/login?error=comment does not exists")
             else:
-                self.redirect("/blog/" + post_id + "?error=You don't have " +
-                              "access to delete this comment.")
+                self.redirect("/login?error=comment does not exists")
+
         else:
             self.redirect("/login?error=You need to be logged, in order to " +
                           "delete your comment!!")
@@ -284,18 +302,24 @@ class DeleteComment(BlogHandler):
 class EditComment(BlogHandler):
     def get(self, post_id, comment_id):
         if self.user:
-            key = db.Key.from_path('Comment', int(comment_id),
-                                   parent=blog_key())
-            c = db.get(key)
-            if c.user_id == self.user.key().id() and key and c:
-                self.render("editcomment.html", comment=c.comment)
+            if post_id and comment_id:
+                key = db.Key.from_path('Comment', int(comment_id),
+                                       parent=blog_key())
+                c = db.get(key)
+                if not c:
+                    return self.redirect("/login?error=comment does not exists!")
+                else:
+                    if c.user_id == self.user.key().id() and key and c:
+                        self.render("editcomment.html", comment=c.comment)
+                    else:
+                        self.redirect("/blog/" + post_id +
+                                      "?error=You don't have access to edit this " +
+                                      "comment.")
             else:
-                self.redirect("/blog/" + post_id +
-                              "?error=You don't have access to edit this " +
-                              "comment.")
+                return self.redirect("/login?error=comment does not exists!")
         else:
-            self.redirect("/login?error=You need to be logged, in order to" +
-                          " edit your post!!")
+            return self.redirect("/login?error=You need to be logged, in order to" +
+                              " edit your post!!")
 
     def post(self, post_id, comment_id):
         """
@@ -307,12 +331,23 @@ class EditComment(BlogHandler):
         comment = self.request.get('comment')
 
         if comment:
-            key = db.Key.from_path('Comment',
-                                   int(comment_id), parent=blog_key())
-            c = db.get(key)
-            c.comment = comment
-            c.put()
-            self.redirect('/blog/%s' % post_id)
+            if post_id and comment_id:
+                key = db.Key.from_path('Comment',
+                                       int(comment_id), parent=blog_key())
+                c = db.get(key)
+                if not c:
+                    return self.redirect("/login?error=comment does not exists!")
+                else:
+                    if c.user_id == self.user.key().id():
+                        c.comment = comment
+                        c.put()
+                        self.redirect('/blog/%s' % post_id)
+                    else:
+                        self.redirect("/blog/" + post_id +
+                                      "?error=You don't have access to edit this " +
+                                      "comment.")
+            else:
+                return self.redirect("login?error=comment does not exists")
         else:
             error = "subject and content, please!"
             self.render("editpost.html", subject=subject,
